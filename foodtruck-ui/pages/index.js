@@ -1,21 +1,12 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import {
-  Map,
-  AdvancedMarker,
-  useMap,
-  useAdvancedMarkerRef,
-} from "@vis.gl/react-google-maps";
+import { Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import Image from "next/image";
 import TruckIcon from "@/src/icons/food-pin.svg";
-import GPSIcon from "@/src/icons/gps.svg";
-
-const SF_BOUNDS = {
-  north: 37.929811,
-  south: 37.640314,
-  west: -122.59307,
-  east: -122.281479,
-};
+import { Header } from "@/components/Header";
+import { ModalCard } from "@/components/ModalCard";
+import { GeoLocationButton } from "@/components/GeoLocationButton";
+import { DEFAULT_LOCATION, SF_BOUNDS, ZOOM_MAP } from "@/helpers/constants";
 
 export async function getStaticProps() {
   const res = await fetch(
@@ -30,6 +21,8 @@ export async function getStaticProps() {
         lat: parseFloat(truck.location.latitude),
         lng: parseFloat(truck.location.longitude),
       },
+      fooditems: truck.fooditems ? truck.fooditems.split(":") : null,
+      facilitytype: truck.facilitytype || null,
     }))
     .filter(
       (value, index, self) =>
@@ -38,34 +31,11 @@ export async function getStaticProps() {
   return { props: { parseData } };
 }
 
-const ZOOM_MAP = 19;
-const DEFAULT_LOCATION = { lat: 37.7749, lng: -122.4194 };
-
 export default function Page({ parseData }) {
   const map = useMap();
   const clusterer = useRef(null);
-  const [userLocation, setUserLocation] = useState(DEFAULT_LOCATION);
   const [data, setData] = useState([]);
-  const [selectedPlace, setSelectedPlace] = useState(null);
-  const [markerRef, marker] = useAdvancedMarkerRef();
-
-  const getUserLocation = () => {
-    if (navigator.geolocation) {
-      console.log("Geolocation is supported");
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          console.log({ lat: latitude, lng: longitude });
-          setUserLocation({ lat: latitude, lng: longitude });
-        },
-        (error) => {
-          console.error("Error getting user location:", error);
-        }
-      );
-    } else {
-      console.error("Geolocation is not supported by this browser.");
-    }
-  };
+  const [selectedMarker, setSelectedMarker] = useState(null);
 
   useEffect(() => {
     if (!map) return;
@@ -74,10 +44,13 @@ export default function Page({ parseData }) {
     }
   }, [map]);
 
-  const handleClick = useCallback((ev) => {
+  const handleClick = useCallback((ev, poi) => {
     if (!map) return;
     if (!ev.latLng) return;
-    console.log("marker clicked:", ev);
+    setSelectedMarker(null);
+    setTimeout(() => {
+      setSelectedMarker(poi);
+    }, 300);
     map.panTo(ev.latLng);
   });
 
@@ -98,33 +71,22 @@ export default function Page({ parseData }) {
 
   const handleTruckDetail = (loc) => {
     map.panTo({ lat: loc.location.lat, lng: loc.location.lng });
+    setSelectedMarker(null);
+    setTimeout(() => {
+      setSelectedMarker(loc);
+    }, 300);
   };
+
+  const handleClose = (event) => {
+    event.stopPropagation();
+    setSelectedMarker(null);
+  };
+
   return (
     <div className="relative w-screen h-screen overflow-hidden">
-      <button
-        onClick={getUserLocation}
-        className="absolute z-10 w-12 h-12 bg-red-500 rounded-full bottom-2 right-2"
-      >
-        <Image src={GPSIcon} width={60} height={60} />
-      </button>
+      <GeoLocationButton map={map} />
       <div className="relative flex">
-        <div className="absolute z-10 w-1/4 h-[calc(100%-24px)] card-header overflow-hidden bg-white rounded-t-3xl  top-4 left-4">
-          <div className="flex flex-col items-center p-4 ">
-            <h1 className="text-3xl">SanFran</h1>
-            <h1 className="text-4xl">Eats</h1>
-          </div>
-          <div className="pb-4 overflow-y-auto h-[calc(100%-108px)]">
-            {data.map((loc) => (
-              <div
-                key={loc.id}
-                className="flex items-center justify-start p-4 border-b-2 border-gray-300 cursor-pointer"
-                onClick={() => handleTruckDetail(loc)}
-              >
-                <span>{loc.key}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <Header data={data} handleTruckDetail={handleTruckDetail} />
         <div className="w-full h-screen">
           <Map
             style={{ width: "100%", height: "100%" }}
@@ -143,13 +105,17 @@ export default function Page({ parseData }) {
           />
           {data.map((poi) => (
             <AdvancedMarker
-              ref={markerRef}
               key={poi.id}
               position={poi.location}
               clickable={true}
-              onClick={handleClick}
-              collisionBehavior="OPTIONAL_AND_HIDES_LOWER_PRIORITY"
+              onClick={(ev) => handleClick(ev, poi)}
+              zIndex={selectedMarker?.id === poi.id ? 10 : 0}
             >
+              <ModalCard
+                selectedMarker={selectedMarker}
+                poi={poi}
+                handleClose={handleClose}
+              />
               <Image width={60} height={60} src={TruckIcon} alt={poi.key} />
             </AdvancedMarker>
           ))}
