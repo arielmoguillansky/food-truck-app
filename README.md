@@ -31,7 +31,8 @@ Follow these steps to set up and run the project:
     ```env
     NEXT_PUBLIC_DATA_SERVER_HOST=http://localhost
     NEXT_PUBLIC_DATA_SERVER_URL=/api/trucks
-    MAP_ID=<your_google_maps_api_key>
+    GOOGLE_MAPS_API_KEY=<your_google_maps_api_key>
+    MAP_ID=<your_google_maps_map_id>
     ```
 
 3. Build and run the Docker containers using Docker Compose:
