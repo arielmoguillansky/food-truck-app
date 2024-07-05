@@ -3,6 +3,8 @@ version: "3.8"
 # Telling docker-compose to build the client and server images and run them in containers.
 services:
   client:
+    depends_on:
+      - server
     # Telling docker-compose to build the client image using the Dockerfile in the client directory.
     build: ./foodtruck-ui
     # Giving the container a name.
@@ -16,6 +18,10 @@ services:
     # Allows you to run container in detached mode.
     stdin_open: true
     tty: true
+    env_file:
+      - .env
+    networks:
+      - foodtruck_network
   server:
     # Telling docker-compose to build the client image using the Dockerfile in the server directory.
     build: ./foodtruck-data
@@ -24,3 +30,8 @@ services:
       - "5000:5000"
     volumes:
       - ./foodtruck-data:/app
+    networks:
+      - foodtruck_network
+networks:
+  foodtruck_network:
+    driver: bridge

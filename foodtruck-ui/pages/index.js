@@ -8,10 +8,12 @@ import { ModalCard } from "@/components/ModalCard";
 import { GeoLocationButton } from "@/components/GeoLocationButton";
 import { DEFAULT_LOCATION, SF_BOUNDS, ZOOM_MAP } from "@/helpers/constants";
 
+const serverHost = process.env.NEXT_PUBLIC_DATA_SERVER_HOST;
+const serverUrl = process.env.NEXT_PUBLIC_DATA_SERVER_URL;
+const fullServerUrl = `${serverHost}${serverUrl}`;
 export async function getStaticProps() {
-  const res = await fetch(
-    `${process.env.DATA_SERVER_HOST}${process.env.DATA_SERVER_URL}`
-  );
+  console.log(fullServerUrl);
+  const res = await fetch(fullServerUrl);
   const repo = await res.json();
   const parseData = repo
     .map((truck) => ({
